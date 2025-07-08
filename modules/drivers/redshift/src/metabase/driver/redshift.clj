@@ -43,6 +43,7 @@
                               :nested-field-columns      false
                               :test/jvm-timezone-setting false
                               :database-routing          true
+                              :describe-is-generated     false
                               :describe-is-nullable      false
                               :describe-default-expr     false
                               :transforms/table          false}]
