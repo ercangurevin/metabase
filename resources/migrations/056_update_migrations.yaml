@@ -391,6 +391,7 @@ databaseChangeLog:
         - dropColumn:
             tableName: metabase_field
             columnName: database_is_pk
+
   - changeSet:
       id: v56.2025-08-19T14:14:23
       author: wotbrew
@@ -409,6 +410,7 @@ databaseChangeLog:
         - dropColumn:
             tableName: metabase_field
             columnName: database_is_nullable
+
   - changeSet:
       id: v56.2025-08-19T14:14:24
       author: wotbrew
@@ -427,6 +429,7 @@ databaseChangeLog:
         - dropColumn:
             tableName: metabase_field
             columnName: database_is_generated
+
   - changeSet:
       id: v56.2025-08-19T14:14:25
       author: wotbrew
