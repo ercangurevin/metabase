@@ -508,6 +508,11 @@ describe("QueryBuilder - unsaved changes warning", () => {
         within(await screen.findByRole("menu")).getByText("SQL query"),
       );
       await waitForLoaderToBeRemoved();
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("debounced-frame-root"),
+        ).not.toBeEmptyDOMElement(),
+      );
 
       await userEvent.click(
         within(screen.getByTestId("query-builder-main")).getByRole("button", {

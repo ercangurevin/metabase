@@ -30,7 +30,7 @@ export type RefreshMode = keyof typeof REFRESH_MODE;
 interface ExplicitSizeProps<T> {
   selector?: string;
   wrapped?: boolean;
-  refreshMode?: RefreshMode | ((props: T) => RefreshMode);
+  refreshMode?: RefreshMode | ((props: T, prevProps: T | null) => RefreshMode);
 }
 
 type ExplicitSizeState = {
@@ -47,13 +47,15 @@ type InnerProps = {
 
 type ExplicitSizeOuterProps<T> = Omit<T, "width" | "height">;
 
+export const DEFAULT_REFRESH_MODE: RefreshMode = "throttle";
+
 /**
  * @deprecated HOCs are deprecated
  */
 function ExplicitSize<T>({
   selector,
   wrapped = false,
-  refreshMode = "throttle",
+  refreshMode = DEFAULT_REFRESH_MODE,
 }: ExplicitSizeProps<T> = {}) {
   return (ComposedComponent: ComponentType<T & ExplicitSizeState>) => {
     const displayName = ComposedComponent.displayName || ComposedComponent.name;
@@ -88,7 +90,7 @@ function ExplicitSize<T>({
           this._refreshMode =
             typeof refreshMode === "string" ? refreshMode : "throttle";
         }
-        const refreshFn = REFRESH_MODE[this._getRefreshMode()];
+        const refreshFn = REFRESH_MODE[this._getRefreshMode(null)];
         this._updateSize = refreshFn(this.__updateSize);
       }
 
@@ -114,7 +116,7 @@ function ExplicitSize<T>({
         this.timeoutId = setTimeout(this._updateSize, 0);
       }
 
-      componentDidUpdate() {
+      componentDidUpdate(prevProps: T) {
         // Check if component previously had no rendered output (this._currentElement was null).
         // Re-run size calculations since the component may now have rendered content with dimensions.
         if (!this._currentElement) {
@@ -122,7 +124,7 @@ function ExplicitSize<T>({
         }
         // update ResizeObserver if element changes
         this._updateResizeObserver();
-        this._updateRefreshMode();
+        this._updateRefreshMode(prevProps);
       }
 
       componentWillUnmount() {
@@ -133,18 +135,18 @@ function ExplicitSize<T>({
         }
       }
 
-      _getRefreshMode = () => {
+      _getRefreshMode = (prevProps: T | null) => {
         if (isCypressActive || this._printMediaQuery?.matches) {
           return "none";
         } else if (typeof refreshMode === "function") {
-          return refreshMode(this.props);
+          return refreshMode(this.props, prevProps);
         } else {
           return refreshMode;
         }
       };
 
-      _updateRefreshMode = () => {
-        const nextMode = this._getRefreshMode();
+      _updateRefreshMode = (prevProps: T) => {
+        const nextMode = this._getRefreshMode(prevProps);
         if (nextMode === this._refreshMode) {
           return;
         }
@@ -160,7 +162,7 @@ function ExplicitSize<T>({
       };
 
       _updateSizeAndRefreshMode = () => {
-        this._updateRefreshMode();
+        this._updateRefreshMode(this.props);
         this._updateSize();
       };
 

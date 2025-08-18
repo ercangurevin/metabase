@@ -3,7 +3,9 @@ import cx from "classnames";
 import { Component, forwardRef } from "react";
 import _ from "underscore";
 
-import ExplicitSize from "metabase/common/components/ExplicitSize";
+import ExplicitSize, {
+  DEFAULT_REFRESH_MODE,
+} from "metabase/common/components/ExplicitSize/ExplicitSize";
 import CS from "metabase/css/core/index.css";
 
 const DEBOUNCE_PERIOD = 300;
@@ -141,6 +143,10 @@ const DebouncedFrameForwardRef = forwardRef(
 );
 
 export default ExplicitSize({
-  // Disable ExplicitSize's debounce/throttle since DebouncedFrame has a built-in debounce
-  refreshMode: "none",
+  refreshMode: (props, prevProps) => {
+    if (props.resetKey !== prevProps?.resetKey) {
+      return "none";
+    }
+    return DEFAULT_REFRESH_MODE;
+  },
 })(DebouncedFrameForwardRef);
