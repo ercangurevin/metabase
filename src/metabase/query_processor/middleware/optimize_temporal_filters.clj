@@ -2,7 +2,6 @@
   "Middlware that optimizes equality filter clauses against bucketed temporal fields. See docstring for
   `optimize-temporal-filters` for more details."
   (:require
-   [clojure.walk :as walk]
    [metabase.legacy-mbql.schema :as mbql.s]
    [metabase.legacy-mbql.util :as mbql.u]
    [metabase.lib.metadata :as lib.metadata]
@@ -13,7 +12,8 @@
    [metabase.util.date-2 :as u.date]
    [metabase.util.log :as log]
    [metabase.util.malli :as mu]
-   [metabase.util.malli.registry :as mr]))
+   [metabase.util.malli.registry :as mr]
+   [metabase.util.performance :as perf]))
 
 (def ^:private optimizable-units
   #{:second :minute :hour :day :week :month :quarter :year})
@@ -346,13 +346,14 @@
   (if (not= query-type :query)
     query
     ;; walk query, looking for inner-query forms that have a `:filter` key
-    (walk/postwalk
+    (perf/postwalk
      (fn [form]
        (if-not (and (map? form) (seq (:filter form)))
          form
          ;; optimize the filters in this inner-query form.
          (let [optimized (optimize-temporal-filters* form)]
            ;; if we did some optimizations, we should flatten/deduplicate the filter clauses afterwards.
+           #_{:clj-kondo/ignore [:deprecated-var]}
            (cond-> optimized
              (not= optimized form) (update :filter mbql.u/combine-filter-clauses)))))
      query)))

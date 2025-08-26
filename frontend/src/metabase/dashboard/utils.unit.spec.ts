@@ -106,10 +106,11 @@ describe("Dashboard utils", () => {
   });
 
   describe("syncParametersAndEmbeddingParams", () => {
-    it("should rename `embedding_parameters` that are renamed in `parameters`", () => {
+    it("should rename `embedding_params` that are renamed in `parameters`", () => {
       const before = {
         embedding_params: { id: "required" },
         parameters: [{ slug: "id", id: "unique-param-id" }],
+        enable_embedding: true,
       };
       const after = {
         parameters: [{ slug: "new_id", id: "unique-param-id" }],
@@ -121,10 +122,11 @@ describe("Dashboard utils", () => {
       expect(result).toEqual(expectation);
     });
 
-    it("should remove `embedding_parameters` that are removed from `parameters`", () => {
+    it("should remove `embedding_params` that are removed from `parameters`", () => {
       const before = {
         embedding_params: { id: "required" },
         parameters: [{ slug: "id", id: "unique-param-id" }],
+        enable_embedding: true,
       };
       const after = {
         parameters: [],
@@ -136,10 +138,27 @@ describe("Dashboard utils", () => {
       expect(result).toEqual(expectation);
     });
 
-    it("should not change `embedding_parameters` when `parameters` hasn't changed", () => {
+    it("should not change `embedding_params` when `parameters` hasn't changed", () => {
       const before = {
         embedding_params: { id: "required" },
         parameters: [{ slug: "id", id: "unique-param-id" }],
+        enable_embedding: true,
+      };
+      const after = {
+        parameters: [{ slug: "id", id: "unique-param-id" }],
+      };
+
+      const expectation = { id: "required" };
+
+      const result = syncParametersAndEmbeddingParams(before, after);
+      expect(result).toEqual(expectation);
+    });
+
+    it("should not try to change `embedding_params` if `enable_embedding` is false (metabase#61516)", () => {
+      const before = {
+        embedding_params: { id: "required" },
+        parameters: [{ slug: "id", id: "unique-param-id" }],
+        enable_embedding: false,
       };
       const after = {
         parameters: [{ slug: "id", id: "unique-param-id" }],
@@ -281,12 +300,27 @@ describe("Dashboard utils", () => {
       visualization_settings: { "card.hide_empty": true },
     });
 
+    const visualizerCardId = 4;
+    const visualizerCard = createMockDashboardCard({
+      id: visualizerCardId,
+      visualization_settings: {
+        visualization: {
+          display: "table",
+          columnValuesMapping: {},
+          settings: { "card.hide_empty": true },
+        },
+      },
+    });
+
     const loadingData = {
       [normalCardId]: {
         100: null,
       },
       [hidingWhenEmptyCardId]: {
         200: null,
+      },
+      [visualizerCardId]: {
+        300: null,
       },
     };
 
@@ -296,6 +330,9 @@ describe("Dashboard utils", () => {
       },
       [hidingWhenEmptyCardId]: {
         200: createMockDataset(),
+      },
+      [visualizerCardId]: {
+        300: createMockDataset(),
       },
     };
 
@@ -310,9 +347,19 @@ describe("Dashboard utils", () => {
           data: createMockDatasetData({ rows: [[1]] }),
         }),
       },
+      [visualizerCardId]: {
+        300: createMockDataset({
+          data: createMockDatasetData({ rows: [[1]] }),
+        }),
+      },
     };
 
-    const cards = [virtualCard, normalCard, hidingWhenEmptyCard];
+    const cards = [
+      virtualCard,
+      normalCard,
+      hidingWhenEmptyCard,
+      visualizerCard,
+    ];
 
     it("when loading and no cards previously were visible it should show only virtual and normal cards", () => {
       const visibleIds = getVisibleCardIds(cards, loadingData);
@@ -323,10 +370,20 @@ describe("Dashboard utils", () => {
       const visibleIds = getVisibleCardIds(
         cards,
         loadingData,
-        new Set([virtualCardId, normalCardId, hidingWhenEmptyCardId]),
+        new Set([
+          virtualCardId,
+          normalCardId,
+          hidingWhenEmptyCardId,
+          visualizerCardId,
+        ]),
       );
       expect(visibleIds).toStrictEqual(
-        new Set([virtualCardId, normalCardId, hidingWhenEmptyCardId]),
+        new Set([
+          virtualCardId,
+          normalCardId,
+          hidingWhenEmptyCardId,
+          visualizerCardId,
+        ]),
       );
     });
 
@@ -338,7 +395,12 @@ describe("Dashboard utils", () => {
     it("when loaded with data it should show all of cards", () => {
       const visibleIds = getVisibleCardIds(cards, loadedWithData);
       expect(visibleIds).toStrictEqual(
-        new Set([virtualCardId, normalCardId, hidingWhenEmptyCardId]),
+        new Set([
+          virtualCardId,
+          normalCardId,
+          hidingWhenEmptyCardId,
+          visualizerCardId,
+        ]),
       );
     });
   });

@@ -14,7 +14,6 @@
    [metabase.driver.sql-jdbc.sync :as sql-jdbc.sync]
    [metabase.driver.sql.query-processor :as sql.qp]
    [metabase.driver.util :as driver.u]
-   [metabase.lib-be.metadata.jvm :as lib.metadata.jvm]
    [metabase.lib.core :as lib]
    [metabase.lib.metadata :as lib.metadata]
    [metabase.lib.test-util :as lib.tu]
@@ -339,58 +338,58 @@
   (mt/test-driver :oracle
     (testing "Correct HoneySQL form should be generated"
       (mt/with-metadata-provider (mt/id)
-        (is (= (letfn [(id
-                         ([field-name database-type]
-                          (id oracle.tx/session-schema "test_data_venues" field-name database-type))
-                         ([table-name field-name database-type]
-                          (id nil table-name field-name database-type))
-                         ([schema-name table-name field-name database-type]
-                          (-> (h2x/identifier :field schema-name table-name field-name)
-                              (h2x/with-database-type-info database-type))))]
-                 {:select [:*]
-                  :from   [{:select
-                            [[(id "id" "number")
-                              [(h2x/identifier :field-alias "id")]]
-                             [(id "name" "varchar2")
-                              [(h2x/identifier :field-alias "name")]]
-                             [(id "category_id" "number")
-                              [(h2x/identifier :field-alias "category_id")]]
-                             [(id "latitude" "binary_double")
-                              [(h2x/identifier :field-alias "latitude")]]
-                             [(id "longitude" "binary_double")
-                              [(h2x/identifier :field-alias "longitude")]]
-                             [(id "price" "number")
-                              [(h2x/identifier :field-alias "price")]]]
-                            :from     [[(h2x/identifier :table oracle.tx/session-schema "test_data_venues")]]
-                            :join-by  [:left-join [[(h2x/identifier :table oracle.tx/session-schema "test_data_categories")
-                                                    [(h2x/identifier :table-alias "test_data_categories__via__cat")]]
-                                                   [:=
-                                                    (id "category_id" "number")
-                                                    (id "test_data_categories__via__cat" "id" "number")]]]
-                            :where    [:=
-                                       (id "test_data_categories__via__cat" "name" "varchar2")
-                                       "BBQ"]
-                            :order-by [[(id "id" "number") :asc]]}]
-                  :where  [:<= [:raw "rownum"] [:inline 100]]})
-               (#'sql.qp/mbql->honeysql
-                :oracle
-                (qp.preprocess/preprocess
-                 (mt/mbql-query venues
-                   {:source-table $$venues
-                    :order-by     [[:asc $id]]
-                    :filter       [:=
-                                   &test_data_categories__via__cat.categories.name
-                                   [:value "BBQ" {:base_type :type/Text, :semantic_type :type/Name, :database_type "VARCHAR"}]]
-                    :fields       [$id $name $category_id $latitude $longitude $price]
-                    :limit        100
-                    :joins        [{:source-table $$categories
-                                    :alias        "test_data_categories__via__cat"
-                                    :strategy     :left-join
-                                    :condition    [:=
-                                                   $category_id
-                                                   &test_data_categories__via__cat.categories.id]
-                                    :fk-field-id  (mt/id :venues :category_id)
-                                    :fields       :none}]})))))))))
+        (is (=? (letfn [(id
+                          ([field-name database-type]
+                           (id oracle.tx/session-schema "test_data_venues" field-name database-type))
+                          ([table-name field-name database-type]
+                           (id nil table-name field-name database-type))
+                          ([schema-name table-name field-name database-type]
+                           (-> (h2x/identifier :field schema-name table-name field-name)
+                               (h2x/with-database-type-info database-type))))]
+                  {:select [:*]
+                   :from   [{:select
+                             [[(id "id" "number")
+                               [(h2x/identifier :field-alias "id")]]
+                              [(id "name" "varchar2")
+                               [(h2x/identifier :field-alias "name")]]
+                              [(id "category_id" "number")
+                               [(h2x/identifier :field-alias "category_id")]]
+                              [(id "latitude" "binary_double")
+                               [(h2x/identifier :field-alias "latitude")]]
+                              [(id "longitude" "binary_double")
+                               [(h2x/identifier :field-alias "longitude")]]
+                              [(id "price" "number")
+                               [(h2x/identifier :field-alias "price")]]]
+                             :from     [[(h2x/identifier :table oracle.tx/session-schema "test_data_venues")]]
+                             :join-by  [:left-join [[{:from [[(h2x/identifier :table oracle.tx/session-schema "test_data_categories")]]}
+                                                     [(h2x/identifier :table-alias "test_data_categories__via__cat")]]
+                                                    [:=
+                                                     (id "category_id" "number")
+                                                     (id "test_data_categories__via__cat" "id" "number")]]]
+                             :where    [:=
+                                        (id "test_data_categories__via__cat" "name" "varchar2")
+                                        "BBQ"]
+                             :order-by [[(id "id" "number") :asc]]}]
+                   :where  [:<= [:raw "rownum"] [:inline 100]]})
+                (#'sql.qp/mbql->honeysql
+                 :oracle
+                 (qp.preprocess/preprocess
+                  (mt/mbql-query venues
+                    {:source-table $$venues
+                     :order-by     [[:asc $id]]
+                     :filter       [:=
+                                    &test_data_categories__via__cat.categories.name
+                                    [:value "BBQ" {:base_type :type/Text, :semantic_type :type/Name, :database_type "VARCHAR"}]]
+                     :fields       [$id $name $category_id $latitude $longitude $price]
+                     :limit        100
+                     :joins        [{:source-table $$categories
+                                     :alias        "test_data_categories__via__cat"
+                                     :strategy     :left-join
+                                     :condition    [:=
+                                                    $category_id
+                                                    &test_data_categories__via__cat.categories.id]
+                                     :fk-field-id  (mt/id :venues :category_id)
+                                     :fields       :none}]})))))))))
 
 (deftest oracle-connect-with-ssl-test
   ;; ridiculously hacky test; hopefully it can be simplified; see inline comments for full explanations
@@ -553,7 +552,7 @@
 (deftest ^:parallel repro-49433-test
   (mt/test-driver
     :oracle
-    (let [mp (lib.metadata.jvm/application-database-metadata-provider (mt/id))
+    (let [mp (mt/metadata-provider)
           query (as-> (lib/query mp (lib.metadata/table mp (mt/id :orders))) $
                   (lib/aggregate $ (lib/count))
                   (lib/breakout $ (m/find-first (comp #{"Category"} :display-name)
@@ -595,7 +594,7 @@
 (deftest inline-local-date-time-test
   (mt/test-driver
     :oracle
-    (let [mp (lib.metadata.jvm/application-database-metadata-provider (mt/id))
+    (let [mp (mt/metadata-provider)
           query (-> (lib/query mp (lib.metadata/table mp (mt/id :checkins)))
                     (lib/aggregate (lib/count)))
           date-field (m/find-first (comp #{"Date"} :display-name) (lib/filterable-columns query))]
@@ -648,7 +647,7 @@
 (deftest nest-window-functions-test
   (mt/test-driver
     :oracle
-    (let [mp (lib.metadata.jvm/application-database-metadata-provider (mt/id))
+    (let [mp (mt/metadata-provider)
           orders            (lib.metadata/table mp (mt/id :orders))
           orders-created-at (lib.metadata/field mp (mt/id :orders :created_at))
           orders-id         (lib.metadata/field mp (mt/id :orders :id))

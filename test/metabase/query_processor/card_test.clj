@@ -1,5 +1,9 @@
 (ns metabase.query-processor.card-test
   "There are more e2e tests in [[metabase.queries.api.card-test]]."
+  {:clj-kondo/config '{:linters
+                       ;; allowing `with-temp` here for now since this tests the REST API which doesn't fully use
+                       ;; metadata providers.
+                       {:discouraged-var {metabase.test/with-temp {:level :off}}}}}
   (:require
    [clojure.test :refer :all]
    [metabase.lib.metadata :as lib.metadata]
@@ -240,7 +244,7 @@
                  (qp.store/miscellaneous-value [::qp.results-metadata/card-stored-metadata]))))))))
 
 ;;; adapted from [[metabase.queries.api.card-test/model-card-test-2]]
-(deftest preserve-model-metadata-test
+(deftest ^:parallel preserve-model-metadata-test
   (testing "Cards preserve their edited metadata"
     (letfn [(base-type->semantic-type [base-type]
               (condp #(isa? %2 %1) base-type

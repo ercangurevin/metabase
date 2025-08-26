@@ -1,11 +1,8 @@
 (ns metabase.query-processor.middleware.add-implicit-joins-test
   (:require
    [clojure.test :refer :all]
-   [malli.error :as me]
    [medley.core :as m]
-   [metabase.legacy-mbql.schema :as mbql.s]
    [metabase.lib.core :as lib]
-   [metabase.lib.schema :as lib.schema]
    [metabase.lib.schema.join :as lib.schema.join]
    [metabase.lib.test-metadata :as meta]
    [metabase.lib.test-util :as lib.tu]
@@ -15,83 +12,11 @@
    [metabase.query-processor.middleware.add-implicit-joins :as qp.add-implicit-joins]
    [metabase.query-processor.middleware.add-source-metadata :as qp.add-source-metadata]
    [metabase.query-processor.middleware.fetch-source-query]
+   [metabase.query-processor.schema :as qp.schema]
    [metabase.query-processor.store :as qp.store]
    [metabase.test :as mt]
    [metabase.util :as u]
-   [metabase.util.malli :as mu]
-   [metabase.util.malli.registry :as mr]))
-
-(deftest ^:parallel distinct-fields-test
-  (testing "distinct-fields should consider type information unimportant for determining whether two Fields are the same"
-    (is (=? [[:field {:join-alias "X"} 1]
-             [:field {:base-type :type/Integer} 1]
-             [:field {:base-type :type/Integer} "bird"]]
-            (#'qp.add-implicit-joins/distinct-fields
-             [[:field {:lib/uuid (str (random-uuid)), :join-alias "X"} 1]
-              [:field {:lib/uuid (str (random-uuid)), :join-alias "X", ::whatever true} 1]
-              [:field {:lib/uuid (str (random-uuid)), :base-type :type/Integer} 1]
-              [:field {:lib/uuid (str (random-uuid))} 1]
-              [:field {:lib/uuid (str (random-uuid)), :effective-type :type/Number} 1]
-              [:field {:lib/uuid (str (random-uuid)), :effective-type :type/Integer} 1]
-              [:field {:lib/uuid (str (random-uuid)), :base-type :type/Integer} "bird"]
-              [:field {:lib/uuid (str (random-uuid)), :base-type :type/Number} "bird"]])))))
-
-(deftest ^:parallel distinct-fields-test-2
-  (let [fields [[:field {:lib/uuid       "67cbb4b0-346b-4087-a5b4-2cb0e33879f7"
-                         :base-type      :type/BigInteger
-                         :effective-type :type/BigInteger}
-                 68848]
-                [:field {:lib/uuid       "f65fb0e8-2752-4e1b-8341-0c94c1f51957"
-                         :base-type      :type/Integer
-                         :effective-type :type/Integer}
-                 68846]
-                [:field {:lib/uuid       "fe4d8fb0-ef9b-4ffe-813a-ae9d4f0ec64a"
-                         :base-type      :type/Integer
-                         :effective-type :type/Integer}
-                 68847]
-                [:field {:lib/uuid       "d8af125d-f6b2-480d-9eea-1b60f32a6b5d"
-                         :base-type      :type/Float
-                         :effective-type :type/Float}
-                 68845]
-                [:field {:lib/uuid       "8070e6e8-28e2-4fb2-a8e2-7a8142d5b19b"
-                         :base-type      :type/Float
-                         :effective-type :type/Float}
-                 68844]
-                [:field {:lib/uuid       "8171d47d-e76e-4dd5-9e01-4368639bfede"
-                         :base-type      :type/Float
-                         :effective-type :type/Float}
-                 68851]
-                [:field {:lib/uuid       "e4196c22-5788-4091-8b98-f0f489402eba"
-                         :base-type      :type/Float
-                         :effective-type :type/Float}
-                 68852]
-                [:field {:lib/uuid       "945058d5-5669-40cb-9590-58f88d1d9987"
-                         :base-type      :type/DateTimeWithLocalTZ
-                         :effective-type :type/DateTimeWithLocalTZ}
-                 68850]
-                [:field {:lib/uuid       "580ac20d-8567-444d-905f-a4f81ded4d53"
-                         :base-type      :type/Integer
-                         :effective-type :type/Integer}
-                 68849]
-                [:field {:source-field   68847
-                         :join-alias     "PRODUCTS__via__PRODUCT_ID"
-                         :lib/uuid       "8f5b747e-bb36-4639-826b-dd40ff394fdf"
-                         :base-type      :type/Text
-                         :effective-type :type/Text}
-                 68861]
-                [:field {:source-field   68847
-                         :lib/uuid       "615c7a01-e368-430a-a3ab-0b7be86570e4"
-                         :base-type      :type/Text
-                         :effective-type :type/Text
-                         :join-alias     "PRODUCTS__via__PRODUCT_ID"}
-                 68867]
-                [:field {:source-field   68847
-                         :lib/uuid       "01237181-caba-40ae-8c37-a12fdba7400f"
-                         :base-type      :type/Text
-                         :effective-type :type/Text
-                         :join-alias     "PRODUCTS__via__PRODUCT_ID"}
-                 68867]]]
-    (is (not (me/humanize (mr/explain ::lib.schema/fields (#'qp.add-implicit-joins/distinct-fields fields)))))))
+   [metabase.util.malli :as mu]))
 
 (deftest ^:parallel fk-field-infos->joins-test
   (is (=? [{:lib/type    :mbql/join
@@ -110,21 +35,20 @@
             {:fk-field-id (meta/id :orders :product-id)}]))))
 
 (deftest ^:parallel resolve-implicit-joins-test
-  (let [query (lib/query
-               meta/metadata-provider
-               (mt/nest-query
-                (lib.tu.macros/mbql-query orders
-                  {:source-table $$orders
-                   :fields       [$id
-                                  &Products.products.title
-                                  $product-id->products.title]
-                   :joins        [{:fields       :all
-                                   :source-table $$products
-                                   :condition    [:= $product-id &Products.products.id]
-                                   :alias        "Products"}]
-                   :order-by     [[:asc $id]]
-                   :limit        2})
-                1))]
+  (let [query (-> (lib/query
+                   meta/metadata-provider
+                   (lib.tu.macros/mbql-query orders
+                     {:source-table $$orders
+                      :fields       [$id
+                                     &Products.products.title
+                                     $product-id->products.title]
+                      :joins        [{:fields       :all
+                                      :source-table $$products
+                                      :condition    [:= $product-id &Products.products.id]
+                                      :alias        "Products"}]
+                      :order-by     [[:asc $id]]
+                      :limit        2}))
+                  lib/append-stage)]
     (is (=? (-> (lib.tu.macros/mbql-query orders
                   {:source-query {:source-table $$orders
                                   :fields       [$id
@@ -148,14 +72,20 @@
                 lib/->legacy-MBQL
                 :query)))))
 
-(mu/defn- add-implicit-joins :- ::mbql.s/Query
-  [query :- ::mbql.s/Query]
+(mu/defn- add-implicit-joins :- ::qp.schema/any-query
+  [query :- ::qp.schema/any-query]
   (letfn [(add-implicit-joins-legacy [query]
             (-> (lib/query (qp.store/metadata-provider) query)
                 qp.add-implicit-joins/add-implicit-joins
                 lib/->legacy-MBQL))]
-    (if (qp.store/initialized?)
+    (cond
+      (:lib/type query)
+      (qp.add-implicit-joins/add-implicit-joins query)
+
+      (qp.store/initialized?)
       (add-implicit-joins-legacy query)
+
+      :else
       (qp.store/with-metadata-provider meta/metadata-provider
         (add-implicit-joins-legacy query)))))
 
@@ -455,21 +385,23 @@
 
 (deftest ^:parallel reuse-existing-joins-e2e-test
   (testing "Should work at arbitrary levels of nesting"
-    (qp.store/with-metadata-provider (mt/id)
+    (let [mp         (mt/application-database-metadata-provider (mt/id))
+          base-query (lib/query
+                      mp
+                      (mt/mbql-query orders
+                        {:source-table $$orders
+                         :fields       [$id
+                                        &Products.products.title
+                                        $product_id->products.title]
+                         :joins        [{:fields       :all
+                                         :source-table $$products
+                                         :condition    [:= $product_id [:field %products.id {:join-alias "Products"}]]
+                                         :alias        "Products"}]
+                         :order-by     [[:asc $id]]
+                         :limit        2}))]
       (doseq [level (range 4)]
         (testing (format "(%d levels of nesting)" level)
-          (let [query (-> (mt/mbql-query orders
-                            {:source-table $$orders
-                             :fields       [$id
-                                            &Products.products.title
-                                            $product_id->products.title]
-                             :joins        [{:fields       :all
-                                             :source-table $$products
-                                             :condition    [:= $product_id [:field %products.id {:join-alias "Products"}]]
-                                             :alias        "Products"}]
-                             :order-by     [[:asc $id]]
-                             :limit        2})
-                          (mt/nest-query level))]
+          (let [query (nth (iterate lib/append-stage base-query) level)]
             (testing (format "\nquery =\n%s" (u/pprint-to-str query))
               (testing "sanity check: we should actually be able to run this query"
                 (is (=? {:status :completed}
@@ -498,31 +430,35 @@
                                                             :field_ref    $product_id->products.title}]))]
                       (is (=? {:status :completed}
                               (qp/process-query query-with-metadata)))))))
-              (is (=? (-> (mt/mbql-query orders
-                            {:source-table $$orders
-                             :fields       [$id
-                                            &Products.products.title
-                                            [:field %products.title {:join-alias   "PRODUCTS__via__PRODUCT_ID"
-                                                                     :source-field %product_id}]]
-                             :joins        [{:source-table $$products
-                                             :alias        "Products"
-                                             :fields       :all
-                                             :condition    [:=
-                                                            $product_id
-                                                            &Products.products.id]}
-                                            {:source-table $$products
-                                             :alias        "PRODUCTS__via__PRODUCT_ID"
-                                             :strategy     :left-join
-                                             :fields       :none
-                                             :fk-field-id  %product_id
-                                             :condition    [:=
-                                                            $product_id
-                                                            &PRODUCTS__via__PRODUCT_ID.products.id]}]
-                             :order-by     [[:asc $id]]
-                             :limit        2})
-                          (mt/nest-query level))
-                      (-> (add-implicit-joins query)
-                          (m/dissoc-in [:query :source-metadata])))))))))))
+              (let [base-expected (lib/query
+                                   mp
+                                   (mt/mbql-query orders
+                                     {:source-table $$orders
+                                      :fields       [$id
+                                                     &Products.products.title
+                                                     [:field %products.title {:join-alias   "PRODUCTS__via__PRODUCT_ID"
+                                                                              :source-field %product_id}]]
+                                      :joins        [{:source-table $$products
+                                                      :alias        "Products"
+                                                      :fields       :all
+                                                      :condition    [:=
+                                                                     $product_id
+                                                                     &Products.products.id]}
+                                                     {:source-table $$products
+                                                      :alias        "PRODUCTS__via__PRODUCT_ID"
+                                                      :strategy     :left-join
+                                                      :fields       :none
+                                                      :fk-field-id  %product_id
+                                                      :condition    [:=
+                                                                     $product_id
+                                                                     &PRODUCTS__via__PRODUCT_ID.products.id]}]
+                                      :order-by     [[:asc $id]]
+                                      :limit        2}))]
+                (is (=? (-> (nth (iterate lib/append-stage base-expected) level)
+                            lib/->legacy-MBQL)
+                        (-> (add-implicit-joins query)
+                            lib/->legacy-MBQL
+                            (m/dissoc-in [:query :source-metadata]))))))))))))
 
 (deftest ^:parallel reuse-existing-joins-test-3
   (testing "We DEFINITELY need to reuse joins if adding them again would break the query."
@@ -1126,3 +1062,35 @@
                          :expressions [[:+ {:lib/expression-name "CC"} 1 1]]
                          :order-by    [[:asc {} [:field {:join-alias "Products"} (meta/id :products :id)]]]}]}
               (qp.add-implicit-joins/add-implicit-joins query))))))
+
+(deftest ^:parallel add-multiple-implicit-joins-for-different-source-fields-test
+  (testing "Test multiple implicit joins against the same table"
+    (let [mp    (-> meta/metadata-provider
+                    ;; mock VENUES.ID being an FK to CATEGORIES.ID (required for implicit joins to work)
+                    (lib.tu/merged-mock-metadata-provider
+                     {:fields [{:id                 (meta/id :venues :id)
+                                :fk-target-field-id (meta/id :categories :id)}]}))
+          query {:lib/type     :mbql/query
+                 :database     (meta/id)
+                 :lib/metadata mp
+                 :stages       [{:lib/type     :mbql.stage/mbql
+                                 :source-table (meta/id :venues)
+                                 :fields       [[:field
+                                                 {:lib/uuid  "00000000-0000-0000-0000-000000000000"
+                                                  :base-type :type/BigInteger}
+                                                 (meta/id :venues :id)]
+                                                [:field
+                                                 {:source-field (meta/id :venues :category-id)
+                                                  :lib/uuid     "00000000-0000-0000-0000-000000000006"
+                                                  :base-type    :type/Text}
+                                                 (meta/id :categories :name)]
+                                                [:field
+                                                 {:source-field (meta/id :venues :id)
+                                                  :lib/uuid     "00000000-0000-0000-0000-000000000007"
+                                                  :base-type    :type/Text}
+                                                 (meta/id :categories :name)]]}]}
+          path  [:stages 0]
+          stage (get-in query path)]
+      (is (=? {:joins [{:alias "CATEGORIES__via__CATEGORY_ID"}
+                       {:alias "CATEGORIES__via__ID"}]}
+              (#'qp.add-implicit-joins/resolve-implicit-joins-this-level query path stage))))))

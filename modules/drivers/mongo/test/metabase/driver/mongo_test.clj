@@ -12,8 +12,8 @@
    [metabase.driver.mongo.execute :as mongo.execute]
    [metabase.driver.mongo.query-processor :as mongo.qp]
    [metabase.driver.mongo.util :as mongo.util]
+   [metabase.driver.settings :as driver.settings]
    [metabase.driver.util :as driver.u]
-   [metabase.lib-be.metadata.jvm :as lib.metadata.jvm]
    [metabase.lib.core :as lib]
    [metabase.lib.util.match :as lib.util.match]
    [metabase.query-processor :as qp]
@@ -99,7 +99,7 @@
           (is (= expected
                  (driver/database-supports? :mongo :expressions db))))))
     (is (= #{:collection}
-           (lib/required-native-extras (lib.metadata.jvm/application-database-metadata-provider (mt/id)))))))
+           (lib/required-native-extras (mt/metadata-provider))))))
 
 (def ^:private native-query
   "[{\"$project\": {\"_id\": \"$_id\"}},
@@ -1018,7 +1018,7 @@
     :mongo
     (testing "Ensure _id is present in results"
       ;; Gist: Limit is set to 2 and there, other fields' names that precede the _id when sorted
-      (with-redefs [mongo/leaf-fields-limit 2]
+      (with-redefs [driver.settings/sync-leaf-fields-limit (constantly 2)]
         (with-describe-table-for-sample
           [{"_id" {"$toObjectId" (org.bson.types.ObjectId.)}
             "__a" 1
@@ -1111,7 +1111,7 @@
                                   {:path "a.b.c.d.e.f.g", :type "array", :indices [1 0 0 0 0 0 0]}
                                   {:path "a.b.c.d.e.f.i", :type "int", :indices [1 0 0 0 0 0 1]}
                                   {:path "a.b.c.d.e.f.h", :type "null", :indices [1 0 0 0 0 0 0]}]]]]
-      (with-redefs [mongo/leaf-fields-limit limit]
+      (with-redefs [driver.settings/sync-leaf-fields-limit (constantly limit)]
         (with-describe-table-for-sample
           [{"_id" {"$toObjectId" (org.bson.types.ObjectId.)}
             "a" {"b" {"c" {"d" {"e" {"f" {"g" [3 2 1]}}}}}}}

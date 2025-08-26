@@ -20,6 +20,14 @@
     (catch Throwable _
       false)))
 
+(def ^{:doc "Indicates whether Dev extensions are available" :added "0.56.0"} dev-available?
+  (try
+    #_{:clj-kondo/ignore [:metabase/modules]}
+    (require 'dev.dummy-namespace)
+    true
+    (catch Throwable _
+      false)))
+
 (def tests-available?
   "Whether code from `./test` is available. This is mainly to facilitate certain things like test QP middleware that we
   want to load only when test code is present."
@@ -121,6 +129,10 @@
    Looks something like `v0.25.0-snapshot (1de6f3f nested-queries-icon)`."
   (let [{:keys [tag hash]} mb-version-info]
     (format "%s (%s)" tag hash)))
+
+(def ^String mb-version-hash
+  "A string representing the hash of the current version of Metabase."
+  (:hash mb-version-info))
 
 (def ^String mb-app-id-string
   "A formatted version string including the word 'Metabase' appropriate for passing along
