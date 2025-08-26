@@ -1,3 +1,4 @@
+import type { FormLocation } from "metabase/databases/types";
 import type {
   ChecklistItemCTA,
   ChecklistItemValue,
@@ -249,12 +250,12 @@ export type EmbedWizardCodeCopiedEvent = ValidateEvent<{
 
 export type ConnectionStringParsedSuccessEvent = ValidateEvent<{
   event: "connection_string_parsed_success";
-  triggered_from: "admin" | "setup" | "embedding_setup";
+  triggered_from: FormLocation;
 }>;
 
 export type ConnectionStringParsedFailedEvent = ValidateEvent<{
   event: "connection_string_parsed_failed";
-  triggered_from: "admin" | "setup" | "embedding_setup";
+  triggered_from: FormLocation;
 }>;
 
 export type TransformTriggerManualRunEvent = ValidateEvent<{
