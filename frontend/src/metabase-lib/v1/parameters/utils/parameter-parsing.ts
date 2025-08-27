@@ -17,6 +17,7 @@ import type {
   ParameterId,
   ParameterValue,
   ParameterValueOrArray,
+  ParameterValuesMap,
 } from "metabase-types/api";
 
 export function getParameterValueFromQueryParams(
@@ -147,8 +148,8 @@ export function getParameterValuesByIdFromQueryParams(
   parameters: Parameter[],
   queryParams: Query,
   lastUsedParametersValues?: Record<ParameterId, unknown>,
-): Record<ParameterId, ParameterValueOrArray | null> {
-  const result: Record<ParameterId, ParameterValueOrArray | null> = {};
+): ParameterValuesMap {
+  const result: ParameterValuesMap = {};
   for (const parameter of parameters) {
     result[parameter.id] = getParameterValueFromQueryParams(
       parameter,
