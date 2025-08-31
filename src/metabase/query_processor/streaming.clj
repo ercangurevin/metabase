@@ -1,4 +1,5 @@
 (ns metabase.query-processor.streaming
+  (:refer-clojure :exclude [every? some])
   (:require
    [metabase.analytics.core :as analytics]
    [metabase.driver :as driver]
@@ -14,7 +15,8 @@
    [metabase.server.streaming-response :as streaming-response]
    [metabase.util :as u]
    [metabase.util.log :as log]
-   [metabase.util.malli :as mu])
+   [metabase.util.malli :as mu]
+   [metabase.util.performance :refer [every? some]])
   (:import
    (clojure.core.async.impl.channels ManyToManyChannel)
    (java.io OutputStream)
