@@ -739,7 +739,7 @@
 
 (defn- ee-snowplow-features-data'
   []
-  (let [features [:sso-jwt :sso-saml :scim :sandboxes :email-allow-list]]
+  (let [features [:sso-jwt :sso-saml :scim :sandboxes :email-allow-list :semantic-search]]
     (map
      (fn [feature]
        {:name      feature
@@ -822,6 +822,9 @@
     :enabled   (if (premium-features/enable-database-routing?)
                  (t2/exists? :model/DatabaseRouter)
                  false)}
+   {:name      :documents
+    :available (premium-features/enable-documents?)
+    :enabled   (premium-features/enable-documents?)}
    {:name      :config-text-file
     :available (premium-features/enable-config-text-file?)
     :enabled   (some? (get env/env :mb-config-file-path))}
@@ -871,7 +874,10 @@
                     boolean)}
    {:name      :table-data-editing
     :available (premium-features/table-data-editing?)
-    :enabled   (premium-features/table-data-editing?)}])
+    :enabled   (premium-features/table-data-editing?)}
+   {:name      :transforms
+    :available (premium-features/enable-transforms?)
+    :enabled   (premium-features/enable-transforms?)}])
 
 (defn- snowplow-features
   []
