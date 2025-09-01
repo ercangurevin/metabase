@@ -40,8 +40,8 @@
    "configure-row-column-security" (has-configured-sandboxes?)
    "create-test-embed" (boolean (embedding.settings/embedding-hub-test-embed-snippet-created))
    "embed-production" (boolean (embedding.settings/embedding-hub-production-embed-snippet-created))
-   "secure-embeds" (boolean (or (and (sso/jwt-enabled) (sso/jwt-configured))
-                                (and (sso/saml-enabled) (sso/saml-configured))))})
+   "secure-embeds" (boolean (or (and (premium-features/has-feature? :sso-jwt) (sso/jwt-enabled) (sso/jwt-configured))
+                                (and (premium-features/has-feature? :sso-saml) (sso/saml-enabled) (sso/saml-configured))))})
 
 (api.macros/defendpoint :get "/checklist"
   "Get the embedding hub checklist status, indicating which setup steps have been completed."
