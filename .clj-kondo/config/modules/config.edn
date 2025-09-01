@@ -1971,7 +1971,7 @@
            util}}
 
   enterprise/embedding-hub
-  {:team "UX West"
+  {:team "Embedding"
    :api  #{metabase-enterprise.embedding-hub.api}
    :uses #{api
            appearance
