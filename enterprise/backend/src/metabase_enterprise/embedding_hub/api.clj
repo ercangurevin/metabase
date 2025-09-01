@@ -43,6 +43,7 @@
    "secure-embeds" (boolean (or (sso/jwt-enabled) (sso/saml-enabled)))})
 
 (api.macros/defendpoint :get "/checklist"
+  "Get the embedding hub checklist status, indicating which setup steps have been completed."
   []
   (embedding-hub-checklist))
 
