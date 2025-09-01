@@ -3,12 +3,10 @@
    [metabase-enterprise.sso.settings :as sso]
    [metabase.api.macros :as api.macros]
    [metabase.api.routes.common :refer [+auth]]
-   [metabase.appearance.settings :as appearance.settings]
+   [metabase.appearance.core :as appearance]
    [metabase.audit-app.core :as audit]
    [metabase.embedding.settings :as embedding.settings]
    [metabase.premium-features.core :as premium-features]
-   [metabase.util.i18n :refer [deferred-tru]]
-   [metabase.util.log :as log]
    [toucan2.core :as t2]))
 
 (set! *warn-on-reflection* true)
@@ -19,7 +17,7 @@
                                        [:= :is_audit false]]}))
 
 (defn- has-user-created-dashboard? []
-  (let [example-dashboard-id (appearance.settings/example-dashboard-id)
+  (let [example-dashboard-id (appearance/example-dashboard-id)
         audit-collection-ids (filter some? [(when-let [audit-coll (audit/default-audit-collection)] (:id audit-coll))
                                             (when-let [custom-coll (audit/default-custom-reports-collection)] (:id custom-coll))])
         where-clause [:and

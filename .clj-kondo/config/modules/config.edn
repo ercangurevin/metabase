@@ -1968,7 +1968,18 @@
            models
            premium-features
            upload
-           util}}}
+           util}}
+
+  enterprise/embedding-hub
+  {:team "UX West"
+   :api  #{metabase-enterprise.embedding-hub.api}
+   :uses #{api
+           appearance
+           audit-app
+           embedding
+           premium-features
+           util
+           enterprise/sso}}}
 
  ;; namespaces matching these patterns (with `re-find`) are excluded from the module linter. Since regex literals
  ;; aren't allowed in EDN just used the `(str <regex>)` version i.e. two slashes instead of one.
