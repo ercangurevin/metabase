@@ -49,6 +49,4 @@
 
 (def ^{:arglists '([request respond raise])} routes
   "`/api/ee/embedding-hub` routes."
-  (api.macros/ns-handler *ns* +auth))
-
-
+  (api.macros/ns-handler *ns* +auth)
